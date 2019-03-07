@@ -1,0 +1,152 @@
+1、列类型：
+Char(n) 【定长字符串类型】 
+Varchar2(n) 【可变长字符串类型】 
+Number 【数值型】 
+Date 【日期时间型】
+
+2、创建表和约束
+Create Table Student(
+ S# Varchar2(10) Constraint PK Primary Key,
+ Sname Varchar2(20) NOT NULL,
+ Age Number(3) Constraint CK_S Check (age>14 and age<100),
+ Sex Char(1) DEFAULT ’F'，
+
+ Constraint UQ_S Unique(Sname), 
+ Constraint CK_SS Check (Sex IN (‘M’,’F’))
+)
+
+3、插入一条记录
+Insert Into Student(s#,sname,age) Values(‘001’,’John’,20)
+
+日期数据插入
+Insert Into Student Values(’s004’，’Rose’, 22, ‘F’, to_date(’11/08/1981’, ‘dd/mm/yyyy’));
+
+4、约束：
+定义主键：不许有空值，也不可重复，一个表只能有一个主键
+唯一性约束：值不可重复，但可以为空
+外键约束：
+Create Table Student( 
+ S# Varchar2(10)
+ Constraint PK_S Primary Key, 
+ Sname Varchar2(20), 
+ Age  Number(3))
+
+Create Table SC( －－选课表 
+ S# Varchar2(10), 
+ C# Varchar2(20), 
+ Score Number(3) , )
+ Constraint FK_SC Foreign Key(S#) References Student(S#) On Delete Cascade)
+
+在子表中（如SC）插入记录时，若主表中对应的列值不存在，则插入出错；
+删除主表中的记录时，若有子表中的相应记录存在，也出错。－－若设置了级联删除则不会出错
+
+级联删除：删除主表中的记录时，同时删除子表中相关联的记录: On Delete Cascade
+级联设空：删除主表中的记录时，同时将子表中相应记录的外键列值设为空: On Delete Set NULL
+
+5、修改表
+增加列：
+Alter Table Student( 
+ Add Dept Varchar2（10） Constraint UQ_S3 UNIQUE )
+
+删除列：
+Alter Table Student( 
+ Drop Column age )
+
+修改列：
+Alter Table Student( 
+ Modify age Integer NOT NULL )
+
+重命名列：
+Alter Table Student( Rename Column sex To gender )
+
+增加约束：
+Alter Table Student( 
+ Add Constraint PK_Student Primary Key(S#) )
+
+删除约束：
+Alter Table SC(
+ Drop Constraint FK_SC )
+
+重命名表：
+Alter Table SC( 
+ Rename To course_selection )
+
+删除表：
+Drop Table Student Cascade Constraints
+Cascade Constraints表示删除表时同时删除该表的所有约束
+
+Update：
+Update Student 
+Set sex＝ ’ F ’ ，age＝23 
+Where sname＝ ’ John ’
+
+Update Student 
+Set age＝age－1
+
+Delete：
+Delete From Student 
+Where s# = ‘s001’
+
+6、查询
+Select <列名表> －－指定希望查看的列 
+From <表名列表> －－指定要查询的表 
+Where <条件> －－指定查询条件 
+Group By <分组列名表> －－指定要分组的列 
+Having <条件> －－指定分组的条件 
+Order By <排序列名表> －－指定如何排序
+
+Select * From Student *表示所有列
+
+使用别名：
+Select s# AS “Student Number” From Student
+
+查询姓名的第一个字母为’R’并且倒数第二个字母为’S’的学生 
+Select * From Student Where sname LIKE ’R%S_’
+%：任意长度的字符串
+ _：单个字符
+
+多个比较式可用NOT、AND和OR连接 
+Select * From Student Where age IS NULL and sname LIKE ‘R%’
+
+去除重复记录：查询学生的姓名 
+Select Distinct sname From Student
+
+Select * From Student Order By age ASC, sname 
+DESC ASC表示升序，DESC表示降序
+
+使用聚集函数 
+Count(列名)：对一列中的值计数 
+Count(*)：计算记录个数 
+SUM(列名)：求一列值的总和（数值） 
+AVG (列名)：求一列值的平均值 
+MIN (列名)：求一列值的最小值 
+MAX (列名)：求一列值的最大值
+
+查询男生和女生的平均年龄 
+Select sex, AVG(age) as Average_age From Student Group By sex 
+除聚集函数外的属性必须全部出现在Group By子句中
+
+查询不同年龄的学生人数，并返回人数在5人以上的结果 
+Select age, COUNT(*) as students From Student 
+Group By age 
+Having COUNT(*) > 5 
+Having子句中必须聚集函数的比较式，而且聚集函数的比较式也只能通过Having子句给出
+
+Having中的聚集函数可与Select中的不同： 
+查询人数在60以上的各个班级的学生平均年龄 
+Select class, AVG(age) From Student Group By class Having COUNT(*) > 60
+
+连接查询：
+三个表student，sc和course
+Select student.s#, student.sname,sc.c# 
+From student,sc 
+Where student.s# = sc.s#
+
+使用表别名
+Select a.s#, b.sname, count(b.c#) as c_count 
+From student a, sc b 
+Where a.s# = b.s# and a.sex=‘M’ 
+Group By a.s#, b.sname 
+Order By student.s#
+
+嵌套查询：

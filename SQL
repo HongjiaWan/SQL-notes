@@ -150,3 +150,51 @@ Group By a.s#, b.sname
 Order By student.s#
 
 嵌套查询：
+1）无关子查询： 父查询与子查询相互独立，子查询语句不依赖父查询中返回的任何记录，可以独立执行
+查询没有选修课程的所有学生的学号和姓名 
+Select s#,sname From student Where s# NOT IN (select distinct s# From sc)
+
+2）相关子查询：相关子查询的结果依赖于父查询的返回值
+查询选修了课程的学生学号和姓名 
+Select s#, sname From student Where EXISTS (Select * From sc Where sc.s# = student.s#)
+
+3）连接视图:子查询出现在From子句中作为表使用
+查询只选修了1门或2门课程的学生学号、姓名和课程数 
+Select s#, count_c# 
+From (Select s#, count(c#) as count_c# From sc Group by s#) sc2, student s Where sc2.s# = s.s# and (count_c#=1 OR count_c#=2)
+
+查询结果连接
+查询课程平均成绩在90分以上或者年龄小于20的学生学号 
+(Select s# From student where age<20) 
+UNION 
+(Select s# From (Select s#, AVG(score) 
+From SC 
+group by s# 
+having avg(score)>90) SC2 )
+
+UNION操作自动去除重复记录 ——Set Union
+Union All操作不去除重复记录 ——Bag Union
+Minus: 差
+Intersect：返回结果的交集
+
+视图：
+是从一个或几个基本表中导出的虚拟表，其数据没有实际存储，但可以和表一样操作 
+视图具有和表一样的逻辑结构定义 
+但视图没有相应的存储文件，而每个表都有相应的存储文件
+
+把每门课程的课程号和平均成绩定义为视图 
+Create View c_view 
+As Select c#, AVG(score) as avg_score From sc Group By c# 
+
+Create View c_view (cno, avg_score) 
+As Select c#, AVG(score) From sc Group By c#
+
+若省略列名表，则必须为函数指定别名 若使用了列名表，则可以不指定函数的别名
+
+视图更新：只有建立在单个表上，而且只是去掉了基本表的某些行和列，但保留了主键的视图才是可更新的
+Update cs_view 
+Set name=‘Rose’ 
+Where s#=‘001’
+
+视图删除：
+Drop VIew cs_view

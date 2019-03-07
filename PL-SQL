@@ -1,0 +1,193 @@
+PL/SQL是Oracle对SQL的一个扩展，是一种过程化的程序设计语言
+
+DECLARE －－变量声明，必须放在首部 
+…… 
+BEGIN 
+…… 
+EXCEPTION 程序体 
+…… 
+END
+
+DECLARE
+ name varchar2(20);
+BEGIN
+ Select sname Into name From Student Where s#=‘001’;
+ DBMS_OUTPUT.PUT_LINE(‘学号001的学生姓名是：’ || sname)
+EXCEPTION
+ When NO_DATA_FOUND Then
+  DBMS_OUTPUT.PUT_LINE(‘学号为001的学生不存在’);
+ When others Then
+  DBMS_OUTPUT.PUT_LINE(‘发生了其它错误’);
+END;
+
+变量声明：
+例1：一般性声明 
+Declare 
+sno Number(3); 
+name Varchar2(10);
+
+例2：声明为正在使用的表中的某个列类型 
+Declare 
+sno student.s#%TYPE; 
+name student.sname%TYPE;
+
+例3：声明记录类型
+DECLARE
+TYPE stu IS RECORD( 
+ s# varchar2(10), 
+ name varchar2(10), 
+ age number ); 
+ val stu; －－声明了一个记录类型的变量val
+BEGIN
+ Select * Into val From Student Where s#=‘001’;
+ DBMS_OUTPUT.PUT_LINE(‘学号001的学生姓名是：’ || val.name)
+END;
+
+例4：声明为一个表的行类型 
+Declare stu Student%ROWTYPE; 
+Stu被声明为与student表相匹配的记录类型，student表的列自动称为stu的成员
+
+分支控制语句：
+IF <表达式> THEN 
+<语句> 
+ELSEIF <表达式> THEN 
+<语句> 
+…… 
+ELSE 
+<语句> 
+END IF；
+
+循环：
+While x<=100 Loop
+total:=total+x;
+x:=x+1;
+End Loop
+
+For x In 1..100 Loop
+total:=total+x;
+End Loop
+
+Loop
+If x<=100 Then
+total:=total+x;
+x:=x+1;
+Else
+Exit;
+End If
+End Loop
+
+Loop
+total:=total+x;
+x:=x+1;
+Exit When x>100
+End Loop
+
+处理异常：
+EXCEPTION
+ When NO_DATA_FOUND Then
+  DBMS_OUTPUT.PUT_LINE(‘学号为001的学生不存在’);
+ When others Then
+  DBMS_OUTPUT.PUT_LINE(‘发生了其它错误’);
+
+人工生成异常：
+If SQL%FOUND Then
+raise_application_error(-20001, ‘学生已存在’);
+
+PL/SQL是过程性语言，每次只能处理单个记录；而SQL是描述性语言，每次可以处理多行记录。PL/SQL支持SQL，问题： PL/SQL如何支持多行记录的操作？
+
+解决方法：游标 游标是客户机或数据库服务器上开辟的一块内存，用于存放SQL返回的结果 
+游标可以协调PL/SQL与SQL之间的数据处理矛盾 
+PL/SQL中可以通过游标来过程化存取SQL返回的结果
+
+--声明一个游标，用于存放所有学生记录
+DECLARE
+ Cursor cs_stu IS select * from student;
+BEGIN
+ Open cs_stu;
+Loop
+ Fetch cs_stu Into sno,name;
+ Exit When cs_stu%NOTFOUND;
+ DBMS_OUTPUT.PUT_LINE(…);
+End Loop;
+Close cs_stu;
+END;
+
+PL/SQL使用游标属性判断游标的当前状态 
+Cursor%FOUND 布尔型，当前FETCH返回一行时为真 
+Cursor%NOTFOUND 布尔型，当前FETCH没有返回一行时为真 
+Cursor%ISOPEN 布尔型，若游标已经打开则为真 
+Cursor%ROWCOUNT 数值型，显示目前为止已从游标中取出的记录数
+
+For循环：
+DECLARE
+Cursor cs_s IS select * from student;
+BEGIN
+For s IN cs_s Loop
+DBMS_OUTPUT.PUT_LINE(…);
+End Loop;
+END;
+
+匿名PL/SQL块 
+以DECLARE/BEGIN开始，每次运行都要编译，程序在数据库中不保存
+命名PL/SQL块 
+可以存储在数据库中，可以随时运行，也可以被SQL或其它程序调用 
+存储过程、函数、触发器、包
+
+存储过程：
+Create or Replace Procedure AddStudent(
+ v_s# IN varchar2, v_sname IN varchar2, v_age IN number)
+AS
+BEGIN
+ Insert Into student(s#,sname,age) Values(v_s#,v_sname,v_age);
+END;
+
+可在其它PL/SQL程序中使用
+BEGIN
+…….
+AddStudent(s,n,a); --s, n, a是变量
+……
+END;
+
+参数类型 
+不能指定长度（与变量定义不同） 
+变量：name varchar2(20) 必须指定长度 
+参数：name IN varchar2 不能指定长度 可使用%TYPE
+参数传递 
+按位置：sam(1,2,3,4) 
+命名传递：sam(b=>2,a=>1,d=>4,c=>3) 与位置无关
+
+触发器：
+触发操作：Update、Insert、Delete 
+通过触发器可以定制数据库对应用程序文件的反应 
+一个触发器只能属于一个表，一个表可有多个触发器
+
+先触发器（Before Trigger）：在DML语句执行之前触发 
+后触发器（After Trigger）：在DML语句执行之后触发
+
+行级触发器：对由触发的DML语句所导致变更的每一行触发一次（一个DML语句可能触发多次） 
+语句级触发器：一个DML语句触发一次（只触发一次）
+
+对于行级触发器，系统变量:old和:new存储每一行的更新前值（:old）和更新后值（:new）
+可以在触发器程序中需要时访问它们
+
+Create or Replace Trigger SetStatus
+After Insert Or Update Of score on SC
+For Each Row 
+ Declare
+ a Number:=0;
+Begin
+ Select count(*) into a From SC where s#:= :new. s# and score<60;
+ If a>=3 Then
+  Update student Set status=‘不合格’ Where s#= :new. s#;
+ Else
+  Update student Set status=‘合格’ Where s#= :new. s#;
+ End If
+End;
+
+触发顺序：
+1.语句级先触发器
+2.对于受语句影响的每一行
+①行级先触发器
+②执行语句
+③行级后触发器
+3.语句级后触发器
